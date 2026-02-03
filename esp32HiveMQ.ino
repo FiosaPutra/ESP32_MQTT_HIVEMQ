@@ -89,6 +89,6 @@ void loop() {
     // Publish the sensor value to the MQTT topic
     Serial.print("IR Sensor Value: ");
     Serial.println(ir_value_str);
-    mqttClient.publish(topic_publish_ir, ir_value_str.c_str());
+    mqttClient.publish(topic_publish_ir, ir_value_str.c_str()); // ganti variable disini untuk publish value yg berbeda
   }
 }
