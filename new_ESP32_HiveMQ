@@ -1,0 +1,112 @@
+#include <Arduino.h>
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <PubSubClient.h>
+
+// ================= WIFI =================
+const char* ssid = "HS-ELEKTRO";
+const char* password = "ELEKTROJAYA2024";
+
+// ================= MQTT =================
+const char* mqtt_broker = "31ebccf1691a440d8d1735583fa77857.s1.eu.hivemq.cloud";
+const int mqtt_port = 8883;
+const char* mqtt_username = "kelompok8";
+const char* mqtt_password = "Kelompok8";
+
+// Topic
+const char* topic_ultrasonic = "esp32/ultrasonic";
+
+// ================= ULTRASONIC =================
+const int trigPin = 32;
+const int echoPin = 33;
+
+long duration;
+int distance;
+
+// ================= OBJECT =================
+WiFiClientSecure wifiClient;
+PubSubClient mqttClient(wifiClient);
+
+// ================= TIMER =================
+unsigned long previous_time = 0;
+const long interval = 1000; // 1 detik
+
+// ================= MQTT SETUP =================
+void setupMQTT() {
+  mqttClient.setServer(mqtt_broker, mqtt_port);
+}
+
+// ================= MQTT RECONNECT =================
+void reconnect() {
+  while (!mqttClient.connected()) {
+    Serial.print("Connecting to MQTT...");
+    String clientId = "ESP32-";
+    clientId += String(random(0xffff), HEX);
+
+    if (mqttClient.connect(clientId.c_str(), mqtt_username, mqtt_password)) {
+      Serial.println(" connected!");
+    } else {
+      Serial.print(" failed, rc=");
+      Serial.print(mqttClient.state());
+      Serial.println(" retry in 5s");
+      delay(5000);
+    }
+  }
+}
+
+// ================= SETUP =================
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nWiFi connected");
+
+  wifiClient.setInsecure(); // ⚠️ testing only
+  setupMQTT();
+}
+
+// ================= LOOP =================
+void loop() {
+  if (!mqttClient.connected()) {
+    reconnect();
+  }
+  mqttClient.loop();
+
+  unsigned long now = millis();
+  if (now - previous_time >= interval) {
+    previous_time = now;
+
+    // Trigger ultrasonic
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
+
+    duration = pulseIn(echoPin, HIGH, 30000); // timeout 30ms
+
+    if (duration == 0) {
+      Serial.println("No echo received");
+      return;
+    }
+
+    distance = duration * 0.034 / 2;
+
+    Serial.print("Distance: ");
+    Serial.print(distance);
+    Serial.println(" cm");
+
+    char payload[10];
+    snprintf(payload, sizeof(payload), "%d", distance);
+
+    mqttClient.publish(topic_ultrasonic, payload);
+  }
+}
