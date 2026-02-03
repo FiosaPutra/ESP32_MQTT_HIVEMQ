@@ -1,0 +1,124 @@
+//ALL CREDITS TO https://medium.com/engineering-iot/connecting-esp32-to-hivemq-for-real-time-iot-data-streaming-with-mqtt-8813f48cb1a4
+
+#include <Arduino.h>
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <PubSubClient.h>
+
+// Wi-Fi credentials
+const char* ssid = "XXXX";
+const char* password = "XXXXXX";
+
+// MQTT broker details private
+const char* mqtt_broker = "XXXXXXXXX";
+const int mqtt_port = 8883;
+const char* mqtt_username = "XXXX";
+const char* mqtt_password = "XXXXX";
+
+
+// MQTT topic for IR sensor
+const char* topic_publish_ir = "esp32/ir_sensor";
+
+// ultrasonic pins Sensor details
+const int trigPin = 32;
+const int echoPin = 33;
+
+long duration;
+int distance;
+
+// Create instances
+WiFiClientSecure wifiClient;
+PubSubClient mqttClient(wifiClient);
+
+// Variables for timing
+long previous_time = 0;
+
+void setupMQTT() {
+  mqttClient.setServer(mqtt_broker, mqtt_port);
+}
+
+void reconnect() {
+  Serial.println("Connecting to MQTT Broker...");
+  while (!mqttClient.connected()) {
+    Serial.println("Reconnecting to MQTT Broker...");
+    String clientId = "ESP32Client-";
+    clientId += String(random(0xffff), HEX);
+    
+    if (mqttClient.connect(clientId.c_str(), mqtt_username, mqtt_password)) {
+      Serial.println("Connected to MQTT Broker.");
+    } else {
+      Serial.print("Failed, rc=");
+      Serial.print(mqttClient.state());
+      Serial.println(" try again in 5 seconds");
+      delay(5000);
+    }
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
+  pinMode(echoPin, INPUT); // Sets the echoPin as an Input
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("Connected to Wi-Fi");
+
+  // Initialize secure WiFiClient
+  wifiClient.setInsecure(); // Use this only for testing, it allows connecting without a root certificate
+  
+  setupMQTT();
+
+  pinMode(ir_sensor_pin, INPUT); // Set IR sensor pin as input
+}
+
+void loop() {
+  // Clears the trigPin
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  // Sets the trigPin on HIGH state for 10 micro seconds
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  // Reads the echoPin, returns the sound wave travel time in microseconds
+  duration = pulseIn(echoPin, HIGH);
+  // Calculating the distance
+  distance = duration * 0.034 / 2;
+
+
+  if (!mqttClient.connected()) {
+    reconnect();
+  }
+  mqttClient.loop();
+
+  long now = millis();
+  if (now - previous_time > 1000) { // Publish every 10 seconds
+    previous_time = now;
+
+    // Read the IR sensor value
+   // int ir_sensor_value = analogRead(ir_sensor_pin);
+   // int distance = map(ir_sensor_value, 0, 4095, 0, 30);
+    
+    // Convert the value to a string
+    // String ir_value_str = String(distance);
+    String us_value_str = String(distance);
+    
+    // Publish the sensor value to the MQTT topic
+    Serial.print("IR Sensor Value: ");
+    Serial.println(ir_value_str);
+    mqttClient.publish(topic_publish_ir, us_value_str.c_str()); // ganti variable disini untuk publish value yg berbeda
+  }
+}
+
+////////////////////////////////////////////////
+
+// defines variables
+
+void setup() {
+
+  Serial.begin(9600); // Starts the serial communication
+}
+void loop() {
