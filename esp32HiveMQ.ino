@@ -15,6 +15,7 @@ const int mqtt_port = 8883;
 const char* mqtt_username = "XXXX";
 const char* mqtt_password = "XXXXX";
 
+
 // MQTT topic for IR sensor
 const char* topic_publish_ir = "esp32/ir_sensor";
 
