@@ -110,15 +110,8 @@ void loop() {
     Serial.print("IR Sensor Value: ");
     Serial.println(ir_value_str);
     mqttClient.publish(topic_publish_ir, us_value_str.c_str()); // ganti variable disini untuk publish value yg berbeda
+    // tambhan mqtt publish dengan topik berbeda untuk  variabel yagn berbeda 
   }
 }
 
 ////////////////////////////////////////////////
-
-// defines variables
-
-void setup() {
-
-  Serial.begin(9600); // Starts the serial communication
-}
-void loop() {
