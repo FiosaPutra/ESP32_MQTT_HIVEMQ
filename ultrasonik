@@ -69,10 +69,7 @@ void setup() {
 
   // Initialize secure WiFiClient
   wifiClient.setInsecure(); // Use this only for testing, it allows connecting without a root certificate
-  
   setupMQTT();
-
-  pinMode(ir_sensor_pin, INPUT); // Set IR sensor pin as input
 }
 
 void loop() {
@@ -106,9 +103,7 @@ void loop() {
     // String ir_value_str = String(distance);
     String us_value_str = String(distance);
     
-    // Publish the sensor value to the MQTT topic
-    Serial.print("IR Sensor Value: ");
-    Serial.println(ir_value_str);
+    // Publish the sensor value to the MQTT topi
     mqttClient.publish(topic_publish_ir, us_value_str.c_str()); // ganti variable disini untuk publish value yg berbeda
     // tambhan mqtt publish dengan topik berbeda untuk  variabel yagn berbeda 
   }
